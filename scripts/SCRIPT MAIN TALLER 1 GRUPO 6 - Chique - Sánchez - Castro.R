@@ -121,6 +121,7 @@ stargazer(reg_2, type="text")
 reg_3<-lm(log_salario~relab+MaxEducLevel, base_todo)
 stargazer(reg_3, type="text")
 
+#PASO 2
 base_todo<-base_todo%>%
   mutate(reg_2_resid=reg_2$residuals)
 

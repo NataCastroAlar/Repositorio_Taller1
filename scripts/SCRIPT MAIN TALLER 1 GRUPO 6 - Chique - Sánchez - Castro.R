@@ -104,3 +104,38 @@ base_todo<-base_todo %>%
 #Variable mujer. Cambio de Sex a female con female=1
 base_todo<-base_todo %>%
   mutate(female = if_else(sex == 0, 1, 0) )
+
+
+#PROBLEMA 4
+##a. Estimación incondicional logaritmo salario vs género
+reg_1<-lm(log_salario ~ sex, data=base_todo)
+
+stargazer(reg_1, type="text")
+
+#b.i. EQUAL PAY FOR EQUAL JOB - TEOREMA FWL  
+#Modelo lineal ln Salario con variables dependientes sexo y categoría de trabajo
+reg_2<-lm(log_salario~mujer+relab+MaxEducLevel, base_todo)
+stargazer(reg_2, type="text")
+
+#PASO 1: Cálculo de los residuales de la regresión en X2=relab y MaxEducLevel
+reg_3<-lm(log_salario~relab+MaxEducLevel, base_todo)
+stargazer(reg_3, type="text")
+
+base_todo<-base_todo%>%
+  mutate(reg_2_resid=reg_2$residuals)
+
+#PASO 2: Cálculo de los residuales sólo con relab y MaxEducLevel
+reg_3<-lm(log_salario~relab+MaxEducLevel, base_todo)
+stargazer(reg_3, type="text")
+
+base_todo_res<-base_todo%>%
+  mutate(reg_3_resid=reg_3$residuals)
+
+#PASO 3: Regresión de residuales del paso 2 sobre los del paso1
+reg_4<-lm(reg_3_resid~reg_2_resid, base_todo)
+
+#COMPARACION CON LA REGRESION INICIAL
+stargazer(reg_4, reg_2, type="text")
+
+#b.ii. EQUAL PAY FOR EQUAL JOB - TEOREMA FWL - CON BOOTSTRAP
+

@@ -279,7 +279,7 @@ eta_reglnw_fn(df3,1:nrow(df3))
 
 set.seed(123)
 
-resultados <- boot(df3, eta_reglnw_fn, R=2000)
+resultados <- boot(df3, eta_reglnw_fn, R=10000)
 resultados
 
 # Intervalo de confianza

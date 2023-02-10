@@ -299,17 +299,17 @@ peak_age_reg2
 eta_mod2_fn<-function(data,index,
                       edad= 49) {
   
-  #get the coefficients
+  #coeficientes
   coefs<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_sqr+tam_empresa, data=base_nueva, subset = index)$coefficients
   
-  #put the coefficients in scalars  
+  #coeficientes en escalares  
   b5<-coefs[5]
   b6<-coefs[6] 
   
-  #calculate the elasticity of demand
+  #calcular peak age
   peak_age<-(-b5/(2*b6))
   
-  #return the elasticty of demand
+  #valor peak age
   return(peak_age)
 }
 
@@ -322,7 +322,7 @@ resultados
 
 boot.ci(resultados, type = c("norm", "basic"))
 
-##PROBLEMA 5
+##-----------------------PROBLEMA 5----------------------
 
 ####a. Dividimos la muestra en dos. 30% y 70%
 set.seed(10101)

@@ -324,106 +324,126 @@ resultados
 
 boot.ci(resultados, type = c("norm", "basic"))
 
------------------------PROBLEMA 5----------------------
+# PREGUNTA 5 -------------- Predicting earning --------------------
 
-####a. Dividimos la muestra en dos. 30% y 70%
+# Para hacer reproducible el ejemplo
 set.seed(10101)
-muestra <- sample(c(TRUE, FALSE), nrow(base_nueva), replace=TRUE, prob=c(0.7,0.3))
-head(muestra)
-sum(muestra)/nrow(base_nueva)
 
-#70% es la muestra de entrenamiento y 30% la de testeo.
-entrenamiento  <- base_nueva[muestra, ] 
-test   <- base_nueva[!muestra, ]
-dim(entrenamiento)
+#create ID column with a row number
+base_nueva$id <- 1:nrow(base_nueva)
 
-####b.
-##########
-##MODELO 1
+#usamos el 70% de la base de datos como entrenamiento y 30% como test 
+entrenamiento <- base_nueva %>% dplyr::sample_frac(0.70)
+test  <- dplyr::anti_join(base_nueva, entrenamiento, by = 'id')
 
-modelo_1<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel, entrenamiento)
-summary(modelo_1)
-coef(modelo_1)
-paste("Coef:", mean(entrenamiento$log_salario_mensual_hora))
+#especificaciones previas ////
 
-#Predicción:
-test$modelo_1<-predict(modelo_1,newdata = test)
+### Modelo 1
+model1<-lm(log_salario_mensual_hora ~ edad + edad_2, data=entrenamiento)
+test$model1<-predict(model1,newdata = test)                    # Predicción
+with(test,mean((log_salario_mensual_hora-model1)^2))           #MSE del modelo 
 
-#MSE Modelo_1
-with(test,mean((log_salario_mensual_hora-modelo_1)^2))
+### Modelo 2
+model2<-lm(log_salario_mensual_hora ~ female, data=entrenamiento)
+test$model2<-predict(model2,newdata = test)                    # Predicción
+with(test,mean((log_salario_mensual_hora-model2)^2))           #MSE del modelo 
 
-###########
-## MODELO 2
-modelo_2<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_sqr, base_nueva)
-summary(modelo_2)
-coef(modelo_2)
-paste("Coef:", mean(entrenamiento$log_salario_mensual_hora))
+### Modelo 3
+model3<-lm(log_salario_mensual_hora ~ female + edad + edad_2 + relab + maxEducLevel + tam_empresa, data=entrenamiento)
+test$model3<-predict(model3,newdata = test)                    # Predicción
+with(test,mean((log_salario_mensual_hora-model3)^2))           #MSE del modelo 
 
-#Predicción:
-test$modelo_2<-predict(modelo_2,newdata = test)
+### nuevas especificaciones ///
 
-#MSE Modelo_2
-with(test,mean((log_salario_mensual_hora-modelo_2)^2))
+### Modelo 4
+model4<-lm(log_salario_mensual_hora ~ female + poly(edad, 2):female + relab:female + maxEducLevel:female + tam_empresa:female, data=entrenamiento)
+test$model4<-predict(model4,newdata = test)                    # Predicción
+with(test,mean((log_salario_mensual_hora-model4)^2))           #MSE del modelo 
 
-###########
-## MODELO 3
-modelo_3<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_sqr+tam_empresa, base_nueva)
-summary(modelo_3)
-coef(modelo_3)
-paste("Coef:", mean(entrenamiento$log_salario_mensual_hora))
+### Modelo 5
+model5<-lm(log_salario_mensual_hora ~ female + poly(edad, 2):female + poly(edad, 2):maxEducLevel +
+             relab:female + maxEducLevel:female + tam_empresa:female +maxEducLevel:tam_empresa +
+             relab:maxEducLevel + relab:tam_empresa, data=entrenamiento)
 
-#Predicción:
-test$modelo_3<-predict(modelo_3,newdata = test)
+test$model5<-predict(model5,newdata = test)                    # Predicción
+with(test,mean((log_salario_mensual_hora-model5)^2))           #MSE del modelo 
 
-#MSE Modelo_3
-with(test,mean((log_salario_mensual_hora-modelo_3)^2))
+### Modelo 6
+model6<-lm(log_salario_mensual_hora ~ female + poly(edad, 2):female + poly(edad, 2):maxEducLevel +
+             poly(edad, 2):relab + poly(edad, 2):tam_empresa + relab:female +
+             maxEducLevel:female + tam_empresa:female +maxEducLevel:tam_empresa +
+             relab:maxEducLevel + relab:tam_empresa, data=entrenamiento)
 
-#####
-#MSE Modelo_4
+test$model6<-predict(model6,newdata = test)                    # Predicción
+with(test,mean((log_salario_mensual_hora-model6)^2))           #MSE del modelo 
 
-#Generamos variables al cuadrado para incluir en el modelo:
-base_nueva<-base_nueva%>%
-  mutate(relab_sqr=relab^2,
-         tam_empresa_sqr=tam_empresa^2)
+### Modelo 7
 
+model7<-lm(log_salario_mensual_hora ~ female + poly(edad, 3):female + poly(edad, 3):maxEducLevel +
+             poly(edad, 3):relab + poly(edad, 3):tam_empresa + relab:female +
+             maxEducLevel:female + tam_empresa:female +maxEducLevel:tam_empresa +
+             relab:maxEducLevel + relab:tam_empresa, data=entrenamiento)
 
-modelo_4<-lm(log_salario_mensual_hora ~ female+relab+relab_sqr+maxEducLevel+edad+edad_sqr+tam_empresa+tam_empresa_sqr, base_nueva)
-summary(modelo_4)
-coef(modelo_4)
-paste("Coef:", mean(entrenamiento$log_salario_mensual_hora))
+test$model7<-predict(model7,newdata = test)                    # Predicción
+with(test,mean((log_salario_mensual_hora-model7)^2))           #MSE del modelo 
 
-#Predicción:
-test$modelo_4<-predict(modelo_4,newdata = test)
+### Modelo 8
 
-#MSE Modelo_1
-with(test,mean((log_salario_mensual_hora-modelo_4)^2))
+model8<-lm(log_salario_mensual_hora ~ edad + sqrt(edad) + female + edad:female + 
+             sqrt(edad):female + edad:maxEducLevel + sqrt(edad):maxEducLevel +
+             edad:relab + sqrt(edad):relab + edad:tam_empresa + sqrt(edad):tam_empresa +
+             relab:female + maxEducLevel:female + tam_empresa:female +maxEducLevel:tam_empresa +
+             relab:maxEducLevel + relab:tam_empresa, data=entrenamiento)
 
-#####
-#MSE Modelo_5
-
-#Generamos variables al cuadrado para incluir en el modelo:
-base_nueva<-base_nueva%>%
-  mutate(relab_3=relab^3,
-         tam_empresa_3=tam_empresa^3)
+test$model8<-predict(model8,newdata = test)                    # Predicción
+with(test,mean((log_salario_mensual_hora-model8)^2))           #MSE del modelo 
 
 
-modelo_5<-lm(log_salario_mensual_hora ~ female+relab+relab_sqr+relab_3+maxEducLevel+edad+edad_sqr+tam_empresa+tam_empresa_sqr+tam_empresa_3, base_nueva)
-summary(modelo_5)
-coef(modelo_5)
-paste("Coef:", mean(entrenamiento$log_salario_mensual_hora))
+### Modelo 9
 
-#Predicción:
-test$modelo_5<-predict(modelo_5,newdata = test)
+model9<-lm(log_salario_mensual_hora ~ female + poly(edad, 5):female + poly(edad, 5):maxEducLevel +
+             poly(edad, 5):relab + poly(edad, 5):tam_empresa + relab:female +
+             maxEducLevel:female + tam_empresa:female +maxEducLevel:tam_empresa +
+             relab:maxEducLevel + relab:tam_empresa, data=entrenamiento)
 
-#MSE Modelo_5
-with(test,mean((log_salario_mensual_hora-modelo_5)^2))
+test$model9<-predict(model9,newdata = test)                    # Predicción
+with(test,mean((log_salario_mensual_hora-model9)^2))           #MSE del modelo 
 
-#TODOS LOS ERRORES
-with(test,mean((log_salario_mensual_hora-modelo_1)^2))
-with(test,mean((log_salario_mensual_hora-modelo_2)^2))
-with(test,mean((log_salario_mensual_hora-modelo_3)^2))
-with(test,mean((log_salario_mensual_hora-modelo_4)^2))
-with(test,mean((log_salario_mensual_hora-modelo_5)^2))
+### Modelo 10
+
+model10<-lm(log_salario_mensual_hora ~ female + poly(edad, 8):female + poly(edad, 8):maxEducLevel +
+              poly(edad, 8):relab + poly(edad, 8):tam_empresa + relab:female +
+              maxEducLevel:female + tam_empresa:female +maxEducLevel:tam_empresa +
+              relab:maxEducLevel + relab:tam_empresa, data=entrenamiento)
+
+test$model10<-predict(model10,newdata = test)                    # Predicción
+with(test,mean((log_salario_mensual_hora-model10)^2))            #MSE del modelo 
+
+
+mse1<-with(test,round(mean((log_salario_mensual_hora-model1)^2),4))
+mse2<-with(test,round(mean((log_salario_mensual_hora-model2)^2),4))
+mse3<-with(test,round(mean((log_salario_mensual_hora-model3)^2),4))
+mse4<-with(test,round(mean((log_salario_mensual_hora-model4)^2),4))
+mse5<-with(test,round(mean((log_salario_mensual_hora-model5)^2),4))
+mse6<-with(test,round(mean((log_salario_mensual_hora-model6)^2),4))
+mse7<-with(test,round(mean((log_salario_mensual_hora-model7)^2),4))
+mse8<-with(test,round(mean((log_salario_mensual_hora-model8)^2),4))
+mse9<-with(test,round(mean((log_salario_mensual_hora-model9)^2),4))
+mse10<-with(test,round(mean((log_salario_mensual_hora-model10)^2),4))
+
+mse<-c(mse1,mse2,mse3,mse4,mse5,mse6,mse7,mse8,mse9,mse10)
+
+db<-data.frame(model=factor(c("model1","model2","model3","model4","model5","model6","model7",
+                              "model8","model9","model10"),ordered=TRUE),MSE=mse)
+db
+
+# 
+
+stargazer(model8, type = "text",
+          title = " Regresion con mejor error pedictivo (model9)",
+          aling = TRUE,
+          dep.var.labels = "Logaritmo del Salario"
+)
 
 
 #PLOT ERRORES

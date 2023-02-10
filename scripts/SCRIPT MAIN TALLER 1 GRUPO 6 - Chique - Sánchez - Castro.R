@@ -100,7 +100,7 @@ base_nueva<-na.omit(base_nueva)
 #Cálculo del salario:
 base_nueva<-base_nueva %>%
   mutate(salario_mensual=p6500+p6510s1)%>%
-  mutate(salario_mensual_hora=salario_mensual/hoursWorkUsual)
+  mutate(salario_mensual_hora=salario_mensual/hoursWorkUsual*4)
 
 
 #Logaritmo del salario
@@ -116,13 +116,13 @@ base_nueva<-base_nueva %>%
 ##################
 
 ##################
-##a. Estimación incondicional logaritmo salario vs género
+##---------a. Estimación incondicional logaritmo salario vs género--------
 
 reg_1<-lm(log_salario_mensual_hora ~ female, base_nueva)
 pred_reg_1<-predict(reg_1)
 
 stargazer(reg_1, type = "text",
-          title = "Tabla 4.1: Regresión Log Salario - Female",
+          title = " Regresión Log Salario - Female",
           aling = TRUE,
           dep.var.labels = "Logaritmo del Salario",
           covariate.labels = c("female"),
@@ -131,12 +131,21 @@ stargazer(reg_1, type = "text",
 
 summary(reg_1)
 confint(reg_1)
-exp(0.039)
 
-#
+
+summ = base_nueva %>%  
+  group_by(female) %>%  
+  summarize(
+    mean_y = mean(log_salario_mensual_hora),
+    pred_reg_1 = mean(pred_reg_1), .groups="drop"
+  ) 
+
+
+
+confint(reg_1)
 
 #######################
-#b.i. EQUAL PAY FOR EQUAL JOB - TEOREMA FWL
+#---------------b.i. EQUAL PAY FOR EQUAL JOB - TEOREMA FWL--------------
 #Variables que se van a utilizar en el modelo: log_salario, mujer, relación laboral, 
 #máximo nivel educativo alcanzado, tamaño de la empresa donde labora:
 
@@ -152,43 +161,60 @@ base_nueva<-base_nueva %>%
 
 #Modelo lineal ln Salario con variables dependientes female y categoría de trabajo
 reg_2<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_sqr+tam_empresa, base_nueva)
-stargazer(reg_2, type="text", digits=3)
+stargazer(reg_2, type="text", digits=5)
 
-pred_reg_2<-predict(reg_2)
+stargazer(reg_2, type = "text",
+          title = " Regresión Log Salario - todas las variables",
+          aling = TRUE,
+          dep.var.labels = "Logaritmo del Salario",
+          digits=5
+)
+
+base_nueva<-base_nueva%>%
+  mutate(pred_reg_2=predict(reg_2))
+
 
 summary(reg_2, digits=3)
 confint(reg_2)
 
-#UTILIZANDO FWL:
+#--------------------UTILIZANDO FWL---------------------
 #PASO 1: Cálculo de los residuales de la regresión en los X2
 
 reg_3<-lm(log_salario_mensual_hora~relab+maxEducLevel+edad+edad_sqr+tam_empresa, data=base_nueva)
-stargazer(reg_3, type="text")
+stargazer(reg_3, type="text", digit=5)
 
-pred_reg_3<-predict(reg_3)
+base_nueva<-base_nueva %>%
+  mutate(pred_reg_3=predict(reg_3))
+
 
 resid_reg_3<-resid(reg_3)
 
 #PASO 2: Cálculo de los residuales de la regresión de X1 y X2:
 reg_4<-lm(female~relab+maxEducLevel+edad+edad_sqr+tam_empresa, base_nueva)
-stargazer(reg_4, type="text")
+stargazer(reg_4, type="text", digit=5)
 resid_reg_4=resid(reg_4)
 
 
 #PASO 3: Regresión de ambos residuales
 reg_5<-lm(resid_reg_3 ~ resid_reg_4 , base_nueva)
-stargazer(reg_5, type="text")
+
+stargazer(reg_5, type = "text",
+          title = " Regresión Resid reg_3 Resid reg_4",
+          aling = TRUE,
+          dep.var.labels = "Logaritmo del Salario",
+          digits=5
+)
 
 #COMPARACION CON LA REGRESION INICIAL
-stargazer(reg_5, reg_2, type="text")
+stargazer(reg_5, reg_2, type="text", digit=5)
 
 #Comparación de residuales
 sum(resid(reg_5)^2)
 sum(resid(reg_2)^2)
 
 
-##########################
-##FWL CON BOOTSTRAP
+
+##----------------------FWL CON BOOTSTRAP
 p_load("boot")
 
 ##Bootstrap con la función completa
@@ -198,10 +224,8 @@ sal_fn<-function(data,index) {
 
 boot(base_nueva, sal_fn, R = 1000)
 
-coef_sal_fn<-sal_fn$coefs
-coef_sal_fn
 
-## FWL con bootstrap
+#FWL con bootstrap
 #Se crea la función de FWL
 fwl_bootstrap_log_salario<-function(data,index) {
   #FWL is the regression of residuals on residuals
@@ -218,8 +242,85 @@ fwl_bootstrap_log_salario(base_nueva,1:nrow(base_nueva))
 boot(base_nueva, fwl_bootstrap_log_salario, R = 1000)
 
 
-#price_bar<-mean(gas$price)
+###------------------Age-Wage profile-----------------
+base_nueva<-base_nueva%>%
+  mutate(mean_log_salario=mean(log_salario_mensual_hora))
 
+base_nueva<-base_nueva%>%
+  mutate(mean_pred_log_salario=mean(pred_reg_2))
+
+## Gráfica Salario - Edad
+base_nueva<-base_nueva%>%
+  filter(edad<=55)%>%
+  filter(edad>=18)
+
+summ1 = base_nueva %>%
+  group_by(
+    female, edad) %>% 
+  summarize(
+    mean_y = mean(log_salario_mensual_hora),
+    yhat_reg = mean(pred_reg_2), .groups="drop"
+  ) 
+
+ggplot(summ1) + 
+  geom_point(
+    aes(x = edad, y = mean_y, color=female)) + 
+  geom_line(
+    aes(x = edad, y = yhat_reg), 
+    color = "green", size = 1.5
+  ) + 
+  labs(
+    title = "Log salario con variables de control por edad",
+    x = "Edad",
+    y = "ln Salario"
+  ) +
+  theme_bw()
+  
+##-----------------------Peak Age---------------------
+
+reg_edad<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_sqr+tam_empresa, base_nueva)
+stargazer(reg_2, type="text", digits=5)
+
+coefs_reg_edad <- reg_edad$coef
+print(coefs_reg_2)
+
+
+# Coeficientes como escalar:
+
+b5 <- coefs_reg_edad[5]
+b6 <- coefs_reg_edad[6]
+
+
+# Cálculo del "peak age"
+
+peak_age_reg2 <- (-b5/(2*b6))
+peak_age_reg2
+
+eta_mod2_fn<-function(data,index,
+                      edad= 49) {
+  
+  #get the coefficients
+  coefs<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_sqr+tam_empresa, data=base_nueva, subset = index)$coefficients
+  
+  #put the coefficients in scalars  
+  b5<-coefs[5]
+  b6<-coefs[6] 
+  
+  #calculate the elasticity of demand
+  peak_age<-(-b5/(2*b6))
+  
+  #return the elasticty of demand
+  return(peak_age)
+}
+
+eta_mod2_fn(base_nueva,1:nrow(base_nueva)) 
+
+boot(base_nueva, eta_mod2_fn,R=1000)
+
+resultados<-boot(base_nueva, eta_mod2_fn,R=1000)
+resultados
+
+boot.ci(resultados, type = c("norm", "basic"))
 
 ##PROBLEMA 5
 
@@ -322,10 +423,24 @@ with(test,mean((log_salario_mensual_hora-modelo_3)^2))
 with(test,mean((log_salario_mensual_hora-modelo_4)^2))
 with(test,mean((log_salario_mensual_hora-modelo_5)^2))
 
+
+#PLOT ERRORES
+
+modelo_1<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel, base_nueva)
+
+res_modelo_1<- resid(modelo_1,newdata = test)
+plot(hist(res_modelo_1))
+pred_modelo_1<-predict(modelo_1,newdata = test)
+
+length(pred_modelo_1)
+length(res_modelo_1)
+
 ##########
 ##LOOCV
-
+library(caret)
 set.seed(1010)
-##
-##
+ctrl<-trainControl(method ="LOOCV")
+model_lv<-train(log_salario_mensual_hora ~ female+relab+maxEducLevel, data=base_nueva, method="lm", trControl=ctrl)
+
+print(model_lv)
 

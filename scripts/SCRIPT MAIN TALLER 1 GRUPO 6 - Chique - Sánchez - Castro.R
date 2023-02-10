@@ -94,8 +94,6 @@ base_nueva<-select(base_todo, sex, age, relab, maxEducLevel, p6870, y_salary_m_h
 
 base_nueva<-na.omit(base_nueva)
 
-##base_todo[is.na(base_todo) | base_todo=="-Inf"] = NA
-
 
 #Cálculo del salario:
 base_nueva<-base_nueva %>%

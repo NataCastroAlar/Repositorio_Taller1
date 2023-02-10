@@ -440,7 +440,7 @@ db
 # 
 
 stargazer(model8, type = "text",
-          title = " Regresion con mejor error pedictivo (model9)",
+          title = " Regresion con mejor error pedictivo (model8)",
           aling = TRUE,
           dep.var.labels = "Logaritmo del Salario"
 )

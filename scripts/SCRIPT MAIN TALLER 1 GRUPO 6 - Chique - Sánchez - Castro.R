@@ -100,7 +100,7 @@ base_nueva<-na.omit(base_nueva)
 #Cálculo del salario:
 base_nueva<-base_nueva %>%
   mutate(salario_mensual=p6500+p6510s1)%>%
-  mutate(salario_mensual_hora=salario_mensual/hoursWorkUsual*4)
+  mutate(salario_mensual_hora=salario_mensual/(hoursWorkUsual*4))
 
 
 #Logaritmo del salario
@@ -110,6 +110,18 @@ base_nueva<-base_nueva %>%
 #Variable mujer. Cambio de Sex a female con female=1
 base_nueva<-base_nueva %>%
   mutate(female = if_else(sex == 0, 1, 0) )
+
+#En edad sólo mayores de 18 años
+base_nueva<-base_nueva%>%
+  filter(age>=18)
+
+#Cambio de nombre para variable p6870: total personas de empresa donde labora:
+base_nueva<-base_nueva %>% 
+  rename(tam_empresa = p6870)%>%
+
+#Variable edad al cuadrado
+base_nueva<-base_nueva %>% 
+  mutate(edad_2 = edad*edad)
 
 ##################
 #PROBLEMA 4
@@ -121,6 +133,8 @@ base_nueva<-base_nueva %>%
 reg_1<-lm(log_salario_mensual_hora ~ female, base_nueva)
 pred_reg_1<-predict(reg_1)
 
+summary(base_nueva)
+
 stargazer(reg_1, type = "text",
           title = " Regresión Log Salario - Female",
           aling = TRUE,
@@ -130,9 +144,10 @@ stargazer(reg_1, type = "text",
 )
 
 summary(reg_1)
+
 confint(reg_1)
 
-
+####BORRAR##
 summ = base_nueva %>%  
   group_by(female) %>%  
   summarize(
@@ -144,23 +159,13 @@ summ = base_nueva %>%
 
 confint(reg_1)
 
-#######################
+
 #---------------b.i. EQUAL PAY FOR EQUAL JOB - TEOREMA FWL--------------
 #Variables que se van a utilizar en el modelo: log_salario, mujer, relación laboral, 
 #máximo nivel educativo alcanzado, tamaño de la empresa donde labora:
 
-#Cambio de nombre para variable p6870: total personas de empresa donde labora:
-base_nueva<-base_nueva %>% 
-  rename(tam_empresa = p6870)%>%
-  rename(edad = age)
-
-#Variable edad al cuadrado
-base_nueva<-base_nueva %>% 
-  mutate(edad_sqr = edad*edad)
-
-
 #Modelo lineal ln Salario con variables dependientes female y categoría de trabajo
-reg_2<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_sqr+tam_empresa, base_nueva)
+reg_2<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_2+tam_empresa, base_nueva)
 stargazer(reg_2, type="text", digits=5)
 
 stargazer(reg_2, type = "text",
@@ -180,7 +185,7 @@ confint(reg_2)
 #--------------------UTILIZANDO FWL---------------------
 #PASO 1: Cálculo de los residuales de la regresión en los X2
 
-reg_3<-lm(log_salario_mensual_hora~relab+maxEducLevel+edad+edad_sqr+tam_empresa, data=base_nueva)
+reg_3<-lm(log_salario_mensual_hora~relab+maxEducLevel+edad+edad_2+tam_empresa, data=base_nueva)
 stargazer(reg_3, type="text", digit=5)
 
 base_nueva<-base_nueva %>%
@@ -190,7 +195,7 @@ base_nueva<-base_nueva %>%
 resid_reg_3<-resid(reg_3)
 
 #PASO 2: Cálculo de los residuales de la regresión de X1 y X2:
-reg_4<-lm(female~relab+maxEducLevel+edad+edad_sqr+tam_empresa, base_nueva)
+reg_4<-lm(female~relab+maxEducLevel+edad+edad_2+tam_empresa, base_nueva)
 stargazer(reg_4, type="text", digit=5)
 resid_reg_4=resid(reg_4)
 
@@ -214,12 +219,12 @@ sum(resid(reg_2)^2)
 
 
 
-##----------------------FWL CON BOOTSTRAP
+##----------------------FWL CON BOOTSTRAP-----
 p_load("boot")
 
 ##Bootstrap con la función completa
 sal_fn<-function(data,index) {
-  coefs<-coef(lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_sqr+tam_empresa, data=base_nueva, subset=index))
+  coefs<-coef(lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_2+tam_empresa, data=base_nueva, subset=index))
 }
 
 boot(base_nueva, sal_fn, R = 1000)
@@ -229,8 +234,8 @@ boot(base_nueva, sal_fn, R = 1000)
 #Se crea la función de FWL
 fwl_bootstrap_log_salario<-function(data,index) {
   #FWL is the regression of residuals on residuals
-  base_nueva$y_resid<-resid(lm(log_salario_mensual_hora~relab+maxEducLevel+edad+edad_sqr+tam_empresa, data=base_nueva, subset=index))
-  base_nueva$x_resid<-resid(lm(female~relab+maxEducLevel+edad+edad_sqr+tam_empresa, data=base_nueva, subset=index))
+  base_nueva$y_resid<-resid(lm(log_salario_mensual_hora~relab+maxEducLevel+edad+edad_2+tam_empresa, data=base_nueva, subset=index))
+  base_nueva$x_resid<-resid(lm(female~relab+maxEducLevel+edad+edad_2+tam_empresa, data=base_nueva, subset=index))
   coef_interest<-coef(lm(y_resid~x_resid, data=base_nueva, subset=index))
   coef_interest
 }
@@ -251,8 +256,7 @@ base_nueva<-base_nueva%>%
 
 ## Gráfica Salario - Edad
 base_nueva<-base_nueva%>%
-  filter(edad<=55)%>%
-  filter(edad>=18)
+  filter(edad<=55)
 
 summ1 = base_nueva %>%
   group_by(
@@ -278,8 +282,8 @@ ggplot(summ1) +
   
 ##-----------------------Peak Age---------------------
 
-reg_edad<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_sqr+tam_empresa, base_nueva)
-stargazer(reg_2, type="text", digits=5)
+reg_edad<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_2+tam_empresa, base_nueva)
+stargazer(reg_edad, type="text", digits=5)
 
 coefs_reg_edad <- reg_edad$coef
 print(coefs_reg_2)
@@ -322,7 +326,7 @@ resultados
 
 boot.ci(resultados, type = c("norm", "basic"))
 
-##-----------------------PROBLEMA 5----------------------
+-----------------------PROBLEMA 5----------------------
 
 ####a. Dividimos la muestra en dos. 30% y 70%
 set.seed(10101)
@@ -339,7 +343,7 @@ dim(entrenamiento)
 ##########
 ##MODELO 1
 
-modelo_1<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel, base_nueva)
+modelo_1<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel, entrenamiento)
 summary(modelo_1)
 coef(modelo_1)
 paste("Coef:", mean(entrenamiento$log_salario_mensual_hora))

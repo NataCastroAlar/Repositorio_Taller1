@@ -122,7 +122,7 @@ df3 <- df3 %>%
 # Transformando variables
 
 df3 <- df3 %>%
-  mutate(age2 = age^2, lnw =log(salario))
+  mutate(age2 = I(age^2), lnw =log(salario))
 
 head(df3)
 

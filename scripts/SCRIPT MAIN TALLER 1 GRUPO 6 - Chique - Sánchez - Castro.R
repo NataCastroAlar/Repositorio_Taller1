@@ -396,9 +396,10 @@ with(test,mean((log_salario_mensual_hora-model7)^2))           #MSE del modelo
 
 model8<-lm(log_salario_mensual_hora ~ edad + sqrt(edad) + female + edad:female + 
              sqrt(edad):female + edad:maxEducLevel + sqrt(edad):maxEducLevel +
-             edad:relab + sqrt(edad):relab + edad:tam_empresa + sqrt(edad):tam_empresa +
-             relab:female + maxEducLevel:female + tam_empresa:female +maxEducLevel:tam_empresa +
-             relab:maxEducLevel + relab:tam_empresa, data=entrenamiento)
+             edad:relab + sqrt(edad):relab + edad:tam_empresa + sqrt(edad):tam_empresa + relab +
+             tam_empresa + maxEducLevel + tam_empresa + relab:female + maxEducLevel:female +
+             tam_empresa:female +maxEducLevel:tam_empresa + relab:maxEducLevel + 
+             relab:tam_empresa, data=entrenamiento)
 
 test$model8<-predict(model8,newdata = test)                    # Predicción
 with(test,mean((log_salario_mensual_hora-model8)^2))           #MSE del modelo 
@@ -442,25 +443,26 @@ db_mse<-data.frame(model=factor(c("model1","model2","model3","model4","model5","
                               "model8","model9","model10"),ordered=TRUE),MSE=mse)
 db_mse
 
-# 
+# Mejor modelo
 
 stargazer(model8, type = "text",
-          title = " Regresion con mejor error pedictivo (model8)",
+          title = " Regresion con mejor error predictivo (model8)",
           aling = TRUE,
           dep.var.labels = "Logaritmo del Salario"
 )
 
 
-#PLOT ERRORES
+#PLOT DE LOS ERRORES DE PREDICCION 
 
-modelo_1<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel, base_nueva)
+res_pred_modelo_8<- resid(model8,newdata = test)
 
-res_modelo_1<- resid(modelo_1,newdata = test)
-plot(hist(res_modelo_1))
-pred_modelo_1<-predict(modelo_1,newdata = test)
+hist(res_pred_modelo_8, main = "Distribucion de los errores de prediccion (model8)",
+                                    xlab = "Error de prediccion")
 
-length(pred_modelo_1)
-length(res_modelo_1)
+hist(res_pred_modelo_8, main = "Distribucion de los errores de prediccion (model8)",
+     xlab = "Error de prediccion", freq = FALSE)
+
+pred_modelo_8<-predict(model8,newdata = test)
 
 ##########
 ##LOOCV

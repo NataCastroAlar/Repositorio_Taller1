@@ -94,6 +94,7 @@ base_nueva<-select(base_todo, sex, age, relab, maxEducLevel, p6870, y_salary_m_h
 
 base_nueva<-na.omit(base_nueva)
 
+skim(base_nueva)
 
 #Cálculo del salario:
 base_nueva<-base_nueva %>%
@@ -115,12 +116,16 @@ base_nueva<-base_nueva%>%
 
 #Cambio de nombre para variable p6870: total personas de empresa donde labora:
 base_nueva<-base_nueva %>% 
-  rename(tam_empresa = p6870)%>%
+  rename(tam_empresa = p6870)
+
+base_nueva<-base_nueva %>% 
+  rename(edad = age)
 
 #Variable edad al cuadrado
 base_nueva<-base_nueva %>% 
-  mutate(edad_2 = I(age^2))
+  mutate(edad_2 = I(edad^2))
 
+summary(base_nueva)
 ##################
 #PROBLEMA 4
 ##################

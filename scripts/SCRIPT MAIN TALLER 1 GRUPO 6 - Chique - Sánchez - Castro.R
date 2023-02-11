@@ -438,9 +438,9 @@ mse10<-with(test,round(mean((log_salario_mensual_hora-model10)^2),4))
 
 mse<-c(mse1,mse2,mse3,mse4,mse5,mse6,mse7,mse8,mse9,mse10)
 
-db<-data.frame(model=factor(c("model1","model2","model3","model4","model5","model6","model7",
+db_mse<-data.frame(model=factor(c("model1","model2","model3","model4","model5","model6","model7",
                               "model8","model9","model10"),ordered=TRUE),MSE=mse)
-db
+db_mse
 
 # 
 

@@ -119,7 +119,6 @@ base_nueva<-base_nueva %>%
 
 #Variable edad al cuadrado
 base_nueva<-base_nueva %>% 
-  mutate(edad_2 = edad*edad)
 
 ##################
 #PROBLEMA 4

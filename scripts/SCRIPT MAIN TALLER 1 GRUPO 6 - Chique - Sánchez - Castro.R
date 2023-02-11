@@ -150,18 +150,6 @@ summary(reg_1)
 
 confint(reg_1)
 
-####BORRAR##
-summ = base_nueva %>%  
-  group_by(female) %>%  
-  summarize(
-    mean_y = mean(log_salario_mensual_hora),
-    pred_reg_1 = mean(pred_reg_1), .groups="drop"
-  ) 
-
-
-
-confint(reg_1)
-
 
 #---------------b.i. EQUAL PAY FOR EQUAL JOB - TEOREMA FWL--------------
 #Variables que se van a utilizar en el modelo: log_salario, mujer, relación laboral, 
@@ -257,6 +245,32 @@ base_nueva<-base_nueva%>%
 base_nueva<-base_nueva%>%
   mutate(mean_pred_log_salario=mean(pred_reg_2))
 
+####CON DATA FRAME
+mujer<-data.frame(mujer=1, hombre=0, base_nueva)
+reg_mujer<-lm(log_salario_mensual_hora ~ mujer+relab+maxEducLevel+edad+edad_2+tam_empresa, mujer)
+mujer<- mujer%>%
+  mutate(pred_mujer=predict(reg_mujer))
+
+##CON VARIABLES MUJER - HOMBRE EN LA BASE GENERAL
+reg_hombre<-lm(log_salario_mensual_hora ~ hombre+relab+maxEducLevel+edad+edad_2+tam_empresa, mujer)
+mujer<- mujer%>%
+  mutate(pred_hombre=predict(reg_hombre))
+
+base_nueva<-base_nueva%>%
+  mutate(mujer=(female=0))
+
+base_nueva<-base_nueva%>%
+  mutate(hombre=(female=1))
+
+reg_mujer<-lm(log_salario_mensual_hora ~ mujer+relab+maxEducLevel+edad+edad_2+tam_empresa, base_nueva)
+base_nueva<- base_nueva%>%
+  mutate(pred_mujer=predict(reg_mujer))
+
+reg_hombre<-lm(log_salario_mensual_hora ~ hombre+relab+maxEducLevel+edad+edad_2+tam_empresa, base_nueva)
+base_nueva<- base_nueva%>%
+  mutate(pred_hombre=predict(reg_hombre))
+
+
 ## Gráfica Salario - Edad
 base_nueva<-base_nueva%>%
   filter(edad<=55)
@@ -288,8 +302,8 @@ ggplot(summ1) +
 reg_edad<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_2+tam_empresa, base_nueva)
 stargazer(reg_edad, type="text", digits=5)
 
-coefs_reg_edad <- reg_edad$coef
-print(coefs_reg_2)
+
+reg_normal<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_2+tam_empresa, base_nueva)
 
 
 # Coeficientes como escalar:

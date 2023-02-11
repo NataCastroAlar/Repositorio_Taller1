@@ -89,56 +89,60 @@ tabla_datos_10<-set_datos_10_html%>%
 #Uniendo tablas de datos
 
 base_todo <- rbind.data.frame(tabla_datos_1, tabla_datos_2, tabla_datos_3, tabla_datos_4, tabla_datos_5, tabla_datos_6, tabla_datos_7, tabla_datos_8, tabla_datos_9, tabla_datos_10)
+as.data.frame(base_todo)
+base_nueva<-select(base_todo, sex, age, relab, maxEducLevel, p6870, y_salary_m_hu, p6500, p6510s1, hoursWorkUsual)
 
-# Cálculo del salario por hora
+base_nueva<-na.omit(base_nueva)
 
-base_todo<-base_todo %>% 
-  mutate(salario = (p6500+p6510s1)/(hoursWorkUsual*4)) 
+skim(base_nueva)
 
-summary(base_todo$salario)
+#Cálculo del salario:
+base_nueva<-base_nueva %>%
+  mutate(salario_mensual=p6500+p6510s1)%>%
+  mutate(salario_mensual_hora=salario_mensual/(hoursWorkUsual*4))
+
+
+#Logaritmo del salario
+base_nueva<-base_nueva %>%
+  mutate(log_salario_mensual_hora=log(salario_mensual_hora))
 
 #Variable mujer. Cambio de Sex a female con female=1
-base_todo<-base_todo %>%
+base_nueva<-base_nueva %>%
   mutate(female = if_else(sex == 0, 1, 0) )
 
+#En edad sólo mayores de 18 años
+base_nueva<-base_nueva%>%
+  filter(age>=18)
 
-# PREGUNTA 3 -------------- Age-wage profile --------------------
+#Cambio de nombre para variable p6870: total personas de empresa donde labora:
+base_nueva<-base_nueva %>% 
+  rename(tam_empresa = p6870)
 
-# Reestructurando la base de datos para la pregunta 3
+base_nueva<-base_nueva %>% 
+  rename(edad = age)
 
-df3<-base_todo %>%
-  select(salario,age)
+#Variable edad al cuadrado
+base_nueva<-base_nueva %>% 
+  mutate(edad_2 = I(edad^2))
 
-# Limpiando la base de datos
+summary(base_nueva)
 
-df3 <- df3 %>%
-  drop_na()
 
-# Base de datos de personas mayores de 18 annos y sin salarios cercanos a cero
-
-df3 <- df3 %>%
-  filter(age >= 18, salario >= 1)
-
-# Transformando variables
-
-df3 <- df3 %>%
-  mutate(age2 = I(age^2), lnw =log(salario))
-
-head(df3)
+# PREGUNTA 3 -------------- Age-wedad profile --------------------
 
 # Analisis descriptivo y grafico
 
-summary(df3$salario)
+summary(base_nueva$salario_mensual_hora)
 
-stargazer(df3, type = "text", digits = 1)
+stargazer(base_nueva, type = "text", digits = 1)
 
-stargazer(df3[c("salario", "age")], header = FALSE, type = "text", 
+stargazer(base_nueva[c("salario_mensual_hora", "edad")], header = FALSE, type = "text", 
           title = "Estadisticas Descriptivas", digits = 1,
           covariate.labels = c("Salario", "Edad"),
           summary.stat = c("n", "min", "p25", "median", "mean","p75", "sd", "max")
 )
 
-g1 <- ggplot(data = df3, mapping = aes(x = age, y= lnw))+
+g1 <- ggplot(data = base_nueva, mapping = aes(x = edad, y= log_salario_mensual_hora))+
   geom_point(col = "#A80000" , size = 0.9)+
   labs(x = "edad",
        y = "logaritmo del salario por hora",
@@ -148,8 +152,8 @@ g1 <- ggplot(data = df3, mapping = aes(x = age, y= lnw))+
 
 g1
 
-g2<- ggplot(data = df3)+
-  geom_histogram(mapping = aes(x=lnw),col= "#A80000", fill = "#A80000")+
+g2<- ggplot(data = base_nueva)+
+  geom_histogram(mapping = aes(x=log_salario_mensual_hora),col= "#A80000", fill = "#A80000")+
   labs(x="logaritmo del salario",
        y="frecuencia",
        title = "Distribucion del salario")+
@@ -158,8 +162,8 @@ g2<- ggplot(data = df3)+
 
 g2
 
-g3 <- ggplot(data = df3)+
-  geom_boxplot(mapping = aes(x=salario), fill = "#A80000", alpha =0.5)+
+g3 <- ggplot(data = base_nueva)+
+  geom_boxplot(mapping = aes(x=salario_mensual_hora), fill = "#A80000", alpha =0.5)+
   labs(x="salario",
        title = "Box Plot")+
   theme_bw() +
@@ -167,8 +171,8 @@ g3 <- ggplot(data = df3)+
 
 g3
 
-g4 <- ggplot(data = df3)+
-  geom_boxplot(mapping = aes(x=lnw), fill = "#A80000", alpha =0.5)+
+g4 <- ggplot(data = base_nueva)+
+  geom_boxplot(mapping = aes(x=log_salario_mensual_hora), fill = "#A80000", alpha =0.5)+
   labs(x="logaritmo del salario",
        title = "Box Plot")+
   theme_bw() +
@@ -178,16 +182,16 @@ g4
 
 grid.arrange(g3,g4, nrow = 1, widths = c(1,1.5))
 
-quantile(x=df3$salario)
+quantile(x=base_nueva$salario_mensual_hora)
 
-IQR(x=df3$salario)
+IQR(x=base_nueva$salario_mensual_hora)
 
 # i) Regresion 
 
-reglnw <- lm(lnw ~ age + age2, data = df3)
-reglnw
+reglsalario_mes_hora <- lm(log_salario_mensual_hora ~ edad + edad_2, data = base_nueva)
+reglsalario_mes_hora
 
-stargazer(reglnw, type = "text",
+stargazer(reglsalario_mes_hora, type = "text",
           title = "Resultados de la Regresion",
           aling = TRUE, digits=7,
           dep.var.labels = "Logaritmo del Salario",
@@ -195,15 +199,15 @@ stargazer(reglnw, type = "text",
 )
 
 
-df3$res_lnw <- reglnw$residuals
+base_nueva$res_log_salario_mensual_hora <- reglsalario_mes_hora$residuals
 
-df3$lnw_hat = predict(reglnw)
+base_nueva$log_salario_mensual_hora_hat = predict(reglsalario_mes_hora)
 
 # iii) Model's in sample fit
 
-mean(df3$res_lnw)
+mean(base_nueva$res_log_salario_mensual_hora)
 
-ggplot(data=df3, mapping = aes(x = lnw_hat, y = res_lnw))+
+ggplot(data=base_nueva, mapping = aes(x = log_salario_mensual_hora_hat, y = res_log_salario_mensual_hora))+
   geom_point(col = "#A80000" , size = 0.9)+
   geom_hline(yintercept=0, linetype="dashed")+
   geom_smooth()+
@@ -213,26 +217,26 @@ ggplot(data=df3, mapping = aes(x = lnw_hat, y = res_lnw))+
   theme_bw() +
   theme(plot.title = element_text(hjust = 0.5))
 
-qqnorm(df3$res_lnw)
+qqnorm(base_nueva$res_log_salario_mensual_hora)
 
-# iv) plot of the estimated age-earning profile
+# iv) plot of the estimated edad-earning profile
 
-summ = df3 %>%
+summ = base_nueva %>%
   group_by(
-    age, age2
+    edad, edad_2
   ) %>%
   summarize(
-    mean_lnw = mean(lnw),
-    lnw_hat_reg = mean(lnw_hat), .groups = "drop"
+    mean_log_salario_mensual_hora = mean(log_salario_mensual_hora),
+    log_salario_mensual_hora_hat_reg = mean(log_salario_mensual_hora_hat), .groups = "drop"
   )
 
 ggplot(summ) +
   geom_point(
-    aes(x = age, y = mean_lnw),
+    aes(x = edad, y = mean_log_salario_mensual_hora),
     color = "#A80000", size = 2
   ) +
   geom_line(
-    aes(x = age, y = lnw_hat_reg),
+    aes(x = edad, y = log_salario_mensual_hora_hat_reg),
     color = "#003399", size = 1
   ) +
   labs(
@@ -243,13 +247,13 @@ ggplot(summ) +
   theme_bw() +
   theme(plot.title = element_text(hjust = 0.5))
 
-### Bootstrap de "peak age"
+### Bootstrap de "peak edad"
 
-reglnw <- lm(lnw ~ age + age2, data = df3)
+reglsalario_mes_hora <- lm(log_salario_mensual_hora ~ edad + edad_2, data = base_nueva)
 
 # i) Obtenemos los coeficientes de la regresion
 
-coefs <- reglnw$coefficients
+coefs <- reglsalario_mes_hora$coefficients
 coefs
 
 # ii) Extrayendo los coeficientes como escalar
@@ -258,34 +262,34 @@ b0 <- coefs[1]
 b1 <- coefs[2]
 b2 <- coefs[3]
 
-# Calculo del "peak age"
+# Calculo del "peak edad"
 
-peak_age <- (-b1/(2*b2))
-peak_age
+peak_edad <- (-b1/(2*b2))
+peak_edad
 
 # Calculo de errores estandar
 
-eta_reglnw_fn <- function(data, index){
-  coefs <- lm(lnw ~ age + age2, data, subset = index)$coefficients
+eta_reglsalario_mes_hora_fn <- function(data, index){
+  coefs <- lm(log_salario_mensual_hora ~ edad + edad_2, data, subset = index)$coefficients
   b1 <- coefs[2]
   b2 <- coefs[3]
-  peak_age <- (-b1/(2*b2))
-  return(peak_age)
+  peak_edad <- (-b1/(2*b2))
+  return(peak_edad)
 }
 
-eta_reglnw_fn(df3,1:nrow(df3))
+eta_reglsalario_mes_hora_fn(base_nueva,1:nrow(base_nueva))
 
 # Implementamos boot
 
 set.seed(123)
 
-resultados <- boot(df3, eta_reglnw_fn, R=10000)
+resultados <- boot(base_nueva, eta_reglsalario_mes_hora_fn, R=10000)
 resultados
 
 # Intervalo de confianza
 
 boot.ci(resultados, type = c("norm", "basic"))
 
-names(resultados)
+
 hist(resultados$t)
 qqnorm(resultados$t, datax = T)

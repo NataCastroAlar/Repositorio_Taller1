@@ -128,7 +128,7 @@ base_nueva<-base_nueva %>%
 summary(base_nueva)
 
 
-# PREGUNTA 3 -------------- Age-wedad profile --------------------
+# PREGUNTA 3 -------------- Age-wage profile --------------------
 
 # Analisis descriptivo y grafico
 

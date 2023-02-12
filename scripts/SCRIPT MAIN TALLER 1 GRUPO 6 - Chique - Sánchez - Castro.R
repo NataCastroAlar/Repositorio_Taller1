@@ -262,7 +262,7 @@ base_mujer<- base_mujer%>%
 reg_hombre<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_2+tam_empresa, base_hombre)
 base_hombre<- base_hombre%>%
   mutate(pred_hombre=predict(reg_hombre))%>%
-  rename(pred_mujer=pred_hombre)
+  rename(pred_mujer=pred_hombre) #para unirlos bajo la misma variable más adelante
 
 data_mh1<-base_mujer%>%
   select(pred_mujer, female, relab, maxEducLevel, edad, edad_2, tam_empresa, log_salario_mensual_hora)
@@ -279,23 +279,12 @@ summ_mujer_hombre = base_hombre_mujer %>%
     mean_pred_mujer = mean(pred_mujer), .groups="drop"
   ) 
 
-ggplot(summ_mujer_hombre, aes(x = edad, y = mean_pred_mujer, group=female)) +
-  geom_line(aes(color=female))+
-  geom_point()+
-  geom_smooth(aes(group=female, color=female))+
-  labs(
-    title = "Salario Predicho Hombres y Mujeres",
-    x = "Edad",
-    y = "Salario"
-  ) +
-  theme_bw()
 
-###SIN SMOOTH
 ggplot(summ_mujer_hombre, aes(x = edad, y = mean_pred_mujer, group=female)) +
   geom_line(aes(color=female))+
   geom_point()+
   labs(
-    title = "Salario Predicho Hombres y Mujeres",
+    title = "Salario Predicho Hombres y Mujeres con variables de control",
     x = "Edad",
     y = "Salario"
   ) +

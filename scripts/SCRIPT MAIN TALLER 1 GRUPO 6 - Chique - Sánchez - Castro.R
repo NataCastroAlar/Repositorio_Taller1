@@ -585,10 +585,43 @@ pred_modelo_8<-predict(model8,newdata = test)
 
 ##########
 ##LOOCV
-library(caret)
-set.seed(1010)
-ctrl<-trainControl(method ="LOOCV")
-model_lv<-train(log_salario_mensual_hora ~ female+relab+maxEducLevel, data=base_nueva, method="lm", trControl=ctrl)
 
-print(model_lv)
+set.seed(1010)
+folds=1000
+
+index<-split(1:nrow(base_nueva), 1:folds)
+splt<-lapply(1:folds, function(ind) base_nueva[index[[ind]], ])
+View(head(splt[[1]]))
+
+p_load(data.table)
+
+m8<-lapply(1:folds, function(ii) lm(log_salario_mensual_hora ~ edad + sqrt(edad) + female + edad:female + 
+                                      sqrt(edad):female + edad:maxEducLevel + sqrt(edad):maxEducLevel +
+                                      edad:relab + sqrt(edad):relab + edad:tam_empresa + sqrt(edad):tam_empresa + relab +
+                                      tam_empresa + maxEducLevel + tam_empresa + relab:female + maxEducLevel:female +
+                                      tam_empresa:female +maxEducLevel:tam_empresa + relab:maxEducLevel + 
+                                      relab:tam_empresa, data = rbindlist(splt[-ii])))
+
+##Predicción en elfold que dejé por fuera
+
+p8<-lapply(1:folds, function(ii) data.frame(predict(m8[[ii]], newdata = rbindlist(splt[ii]))))
+
+for (i in 1:3) {
+  colnames(p8[[i]])<-"yhat" 
+  splt[[i]] <- cbind(splt[[i]], p8[[i]])
+  
+}
+
+head(splt[[1]])
+
+#Cálculo MSE de cada fold
+
+MSE_k <- lapply(1:3, function(ii) mean((splt[[ii]]$log_salario_mensual_hora - splt[[ii]]$yhat)^2))
+MSE_k
+
+#Calculo la media de los MSE
+
+mean(unlist(MSE_k))
+
+
 

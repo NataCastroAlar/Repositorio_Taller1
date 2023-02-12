@@ -1,4 +1,9 @@
-#GRUPO 6 
+--------------------------------------------------------------------
+#RESOLUCION TALLER 1 - MACHINE LEARNING - PROFESOR IGNACIO SARMIENTO
+#GRUPO 6: Victor Chique - Victor Iván Sánchez - Natalia Castro 
+--------------------------------------------------------------------
+
+
 #SCRAPPING DATOS GEIH DE LA PAGINA DE GITHUB DEL PROFESOR
 ## Librería necesaria
 require(pacman)

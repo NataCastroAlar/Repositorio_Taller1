@@ -1,4 +1,9 @@
-#GRUPO 6 
+--------------------------------------------------------------------
+#RESOLUCION TALLER 1 - MACHINE LEARNING - PROFESOR IGNACIO SARMIENTO
+#GRUPO 6: Victor Chique - Victor Iván Sánchez - Natalia Castro 
+--------------------------------------------------------------------
+
+
 #SCRAPPING DATOS GEIH DE LA PAGINA DE GITHUB DEL PROFESOR
 ## Librería necesaria
 require(pacman)
@@ -262,7 +267,7 @@ base_mujer<- base_mujer%>%
 reg_hombre<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_2+tam_empresa, base_hombre)
 base_hombre<- base_hombre%>%
   mutate(pred_hombre=predict(reg_hombre))%>%
-  rename(pred_mujer=pred_hombre)
+  rename(pred_mujer=pred_hombre) #para unirlos bajo la misma variable más adelante
 
 data_mh1<-base_mujer%>%
   select(pred_mujer, female, relab, maxEducLevel, edad, edad_2, tam_empresa, log_salario_mensual_hora)
@@ -279,23 +284,12 @@ summ_mujer_hombre = base_hombre_mujer %>%
     mean_pred_mujer = mean(pred_mujer), .groups="drop"
   ) 
 
-ggplot(summ_mujer_hombre, aes(x = edad, y = mean_pred_mujer, group=female)) +
-  geom_line(aes(color=female))+
-  geom_point()+
-  geom_smooth(aes(group=female, color=female))+
-  labs(
-    title = "Salario Predicho Hombres y Mujeres",
-    x = "Edad",
-    y = "Salario"
-  ) +
-  theme_bw()
 
-###SIN SMOOTH
 ggplot(summ_mujer_hombre, aes(x = edad, y = mean_pred_mujer, group=female)) +
   geom_line(aes(color=female))+
   geom_point()+
   labs(
-    title = "Salario Predicho Hombres y Mujeres",
+    title = "Salario Predicho Hombres y Mujeres con variables de control",
     x = "Edad",
     y = "Salario"
   ) +
@@ -585,10 +579,77 @@ pred_modelo_8<-predict(model8,newdata = test)
 
 ##########
 ##LOOCV
-library(caret)
+## Modelo 8
 set.seed(1010)
-ctrl<-trainControl(method ="LOOCV")
-model_lv<-train(log_salario_mensual_hora ~ female+relab+maxEducLevel, data=base_nueva, method="lm", trControl=ctrl)
+folds=2000
 
-print(model_lv)
+index<-split(1:2000, 1:folds)
+splt<-lapply(1:folds, function(ind) base_nueva[index[[ind]], ])
+View(head(splt[[1]]))
 
+p_load(data.table)
+
+m8<-lapply(1:folds, function(ii) lm(log_salario_mensual_hora ~ edad + sqrt(edad) + female + edad:female + 
+                                      sqrt(edad):female + edad:maxEducLevel + sqrt(edad):maxEducLevel +
+                                      edad:relab + sqrt(edad):relab + edad:tam_empresa + sqrt(edad):tam_empresa + relab +
+                                      tam_empresa + maxEducLevel + tam_empresa + relab:female + maxEducLevel:female +
+                                      tam_empresa:female +maxEducLevel:tam_empresa + relab:maxEducLevel + 
+                                      relab:tam_empresa, data = rbindlist(splt[-ii])))
+
+##Predicción en elfold que dejé por fuera
+
+p8<-lapply(1:folds, function(ii) data.frame(predict(m8[[ii]], newdata = rbindlist(splt[ii]))))
+
+for (i in 1:folds) {
+  colnames(p8[[i]])<-"yhat" 
+  splt[[i]] <- cbind(splt[[i]], p8[[i]])
+  
+}
+
+head(splt[[1]])
+
+#Cálculo MSE de cada fold
+
+MSE_k <- lapply(1:folds, function(ii) mean((splt[[ii]]$log_salario_mensual_hora - splt[[ii]]$yhat)^2))
+MSE_k
+
+#Calculo la media de los MSE
+
+mean(unlist(MSE_k))
+
+## Modelo 7
+
+set.seed(1010)
+folds=2000
+
+index<-split(1:2000, 1:folds)
+splt<-lapply(1:folds, function(ind) base_nueva[index[[ind]], ])
+View(head(splt[[1]]))
+
+p_load(data.table)
+
+m7<-lapply(1:folds, function(ii) lm(log_salario_mensual_hora ~ female + poly(edad, 3):female + poly(edad, 3):maxEducLevel +
+                                      poly(edad, 3):relab + poly(edad, 3):tam_empresa + relab:female +
+                                      maxEducLevel:female + tam_empresa:female +maxEducLevel:tam_empresa +
+                                      relab:maxEducLevel + relab:tam_empresa, data = rbindlist(splt[-ii])))
+
+##Predicción en elfold que dejé por fuera
+
+p7<-lapply(1:folds, function(ii) data.frame(predict(m7[[ii]], newdata = rbindlist(splt[ii]))))
+
+for (i in 1:folds) {
+  colnames(p7[[i]])<-"yhat" 
+  splt[[i]] <- cbind(splt[[i]], p7[[i]])
+  
+}
+
+head(splt[[1]])
+
+#Cálculo MSE de cada fold
+
+MSE_k <- lapply(1:folds, function(ii) mean((splt[[ii]]$log_salario_mensual_hora - splt[[ii]]$yhat)^2))
+MSE_k
+
+#Calculo la media de los MSE
+
+mean(unlist(MSE_k))

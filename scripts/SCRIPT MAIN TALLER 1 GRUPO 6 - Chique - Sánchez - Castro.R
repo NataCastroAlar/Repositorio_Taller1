@@ -574,11 +574,11 @@ pred_modelo_8<-predict(model8,newdata = test)
 
 ##########
 ##LOOCV
-
+## Modelo 8
 set.seed(1010)
-folds=1000
+folds=2000
 
-index<-split(1:nrow(base_nueva), 1:folds)
+index<-split(1:2000, 1:folds)
 splt<-lapply(1:folds, function(ind) base_nueva[index[[ind]], ])
 View(head(splt[[1]]))
 
@@ -595,7 +595,7 @@ m8<-lapply(1:folds, function(ii) lm(log_salario_mensual_hora ~ edad + sqrt(edad)
 
 p8<-lapply(1:folds, function(ii) data.frame(predict(m8[[ii]], newdata = rbindlist(splt[ii]))))
 
-for (i in 1:3) {
+for (i in 1:folds) {
   colnames(p8[[i]])<-"yhat" 
   splt[[i]] <- cbind(splt[[i]], p8[[i]])
   
@@ -605,12 +605,46 @@ head(splt[[1]])
 
 #Cálculo MSE de cada fold
 
-MSE_k <- lapply(1:3, function(ii) mean((splt[[ii]]$log_salario_mensual_hora - splt[[ii]]$yhat)^2))
+MSE_k <- lapply(1:folds, function(ii) mean((splt[[ii]]$log_salario_mensual_hora - splt[[ii]]$yhat)^2))
 MSE_k
 
 #Calculo la media de los MSE
 
 mean(unlist(MSE_k))
 
+## Modelo 7
 
+set.seed(1010)
+folds=2000
 
+index<-split(1:2000, 1:folds)
+splt<-lapply(1:folds, function(ind) base_nueva[index[[ind]], ])
+View(head(splt[[1]]))
+
+p_load(data.table)
+
+m7<-lapply(1:folds, function(ii) lm(log_salario_mensual_hora ~ female + poly(edad, 3):female + poly(edad, 3):maxEducLevel +
+                                      poly(edad, 3):relab + poly(edad, 3):tam_empresa + relab:female +
+                                      maxEducLevel:female + tam_empresa:female +maxEducLevel:tam_empresa +
+                                      relab:maxEducLevel + relab:tam_empresa, data = rbindlist(splt[-ii])))
+
+##Predicción en elfold que dejé por fuera
+
+p7<-lapply(1:folds, function(ii) data.frame(predict(m7[[ii]], newdata = rbindlist(splt[ii]))))
+
+for (i in 1:folds) {
+  colnames(p7[[i]])<-"yhat" 
+  splt[[i]] <- cbind(splt[[i]], p7[[i]])
+  
+}
+
+head(splt[[1]])
+
+#Cálculo MSE de cada fold
+
+MSE_k <- lapply(1:folds, function(ii) mean((splt[[ii]]$log_salario_mensual_hora - splt[[ii]]$yhat)^2))
+MSE_k
+
+#Calculo la media de los MSE
+
+mean(unlist(MSE_k))

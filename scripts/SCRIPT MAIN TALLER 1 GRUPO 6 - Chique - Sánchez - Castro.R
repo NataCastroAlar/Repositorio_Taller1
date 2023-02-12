@@ -245,30 +245,61 @@ base_nueva<-base_nueva%>%
 base_nueva<-base_nueva%>%
   mutate(mean_pred_log_salario=mean(pred_reg_2))
 
-####CON DATA FRAME
-mujer<-data.frame(mujer=1, hombre=0, base_nueva)
-reg_mujer<-lm(log_salario_mensual_hora ~ mujer+relab+maxEducLevel+edad+edad_2+tam_empresa, mujer)
-mujer<- mujer%>%
+
+#Gráfico Salario estimado Mujeres Hombres
+
+base_mujer<-base_nueva%>%
+  filter(female==1)
+
+base_hombre<-base_nueva%>%
+  filter(female==0)
+
+reg_mujer<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_2+tam_empresa, base_mujer)
+base_mujer<- base_mujer%>%
   mutate(pred_mujer=predict(reg_mujer))
 
-##CON VARIABLES MUJER - HOMBRE EN LA BASE GENERAL
-reg_hombre<-lm(log_salario_mensual_hora ~ hombre+relab+maxEducLevel+edad+edad_2+tam_empresa, mujer)
-mujer<- mujer%>%
-  mutate(pred_hombre=predict(reg_hombre))
 
-base_nueva<-base_nueva%>%
-  mutate(mujer=(female=0))
+reg_hombre<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_2+tam_empresa, base_hombre)
+base_hombre<- base_hombre%>%
+  mutate(pred_hombre=predict(reg_hombre))%>%
+  rename(pred_mujer=pred_hombre)
 
-base_nueva<-base_nueva%>%
-  mutate(hombre=(female=1))
+data_mh1<-base_mujer%>%
+  select(pred_mujer, female, relab, maxEducLevel, edad, edad_2, tam_empresa, log_salario_mensual_hora)
 
-reg_mujer<-lm(log_salario_mensual_hora ~ mujer+relab+maxEducLevel+edad+edad_2+tam_empresa, base_nueva)
-base_nueva<- base_nueva%>%
-  mutate(pred_mujer=predict(reg_mujer))
+data_mh2<-base_hombre%>%
+  select(pred_mujer, female, relab, maxEducLevel, edad, edad_2, tam_empresa, log_salario_mensual_hora)
 
-reg_hombre<-lm(log_salario_mensual_hora ~ hombre+relab+maxEducLevel+edad+edad_2+tam_empresa, base_nueva)
-base_nueva<- base_nueva%>%
-  mutate(pred_hombre=predict(reg_hombre))
+base_hombre_mujer<-rbind(data_mh1, data_mh2)
+
+summ_mujer_hombre = base_hombre_mujer %>%
+  group_by(
+    female, edad) %>% 
+  summarize(
+    mean_pred_mujer = mean(pred_mujer), .groups="drop"
+  ) 
+
+ggplot(summ_mujer_hombre, aes(x = edad, y = mean_pred_mujer, group=female)) +
+  geom_line(aes(color=female))+
+  geom_point()+
+  geom_smooth(aes(group=female, color=female))+
+  labs(
+    title = "Salario Predicho Hombres y Mujeres",
+    x = "Edad",
+    y = "Salario"
+  ) +
+  theme_bw()
+
+###SIN SMOOTH
+ggplot(summ_mujer_hombre, aes(x = edad, y = mean_pred_mujer, group=female)) +
+  geom_line(aes(color=female))+
+  geom_point()+
+  labs(
+    title = "Salario Predicho Hombres y Mujeres",
+    x = "Edad",
+    y = "Salario"
+  ) +
+  theme_bw()
 
 
 ## Gráfica Salario - todo el rango de Edad
@@ -320,12 +351,10 @@ ggplot(summ1) +
     y = "ln Salario"
   ) +
   theme_bw()
-
-
-
-
   
 ##-----------------------Peak Age---------------------
+
+##Peak age para hombres y mujeres
 
 reg_edad<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_2+tam_empresa, base_nueva)
 stargazer(reg_edad, type="text", digits=5)
@@ -338,7 +367,7 @@ eta_mod2_fn<-function(data,index
                       ) {
   
   #coeficientes
-  coefs<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_2+tam_empresa, data=base_nueva, subset = index)$coefficients
+  coefs<-lm(log_salario_mensual_hora ~ +relab+maxEducLevel+edad+edad_2+tam_empresa, data=base_nueva, subset = index)$coefficients
   
   #coeficientes en escalares  
   b5<-coefs[5]
@@ -359,6 +388,64 @@ resultados<-boot(base_nueva, eta_mod2_fn,R=1000)
 resultados
 
 boot.ci(resultados, type = c("norm", "basic"))
+
+
+######Peak ages by gender
+
+##----Peak age para mujeres y hombres
+
+###Para Mujeres
+
+eta_mujer_fn<-function(data,index
+) {
+  
+  #coeficientes
+  coefs<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_2+tam_empresa, data=base_mujer, subset = index)$coefficients
+  
+  #coeficientes en escalares  
+  b5<-coefs[5]
+  b6<-coefs[6] 
+  
+  #calcular peak age
+  peak_age<-(-b5/(2*b6))
+  
+  #valor peak age
+  return(peak_age)
+}
+
+eta_mod2_fn(base_mujer,1:nrow(base_mujer_65)) 
+
+boot(base_mujer, eta_mujer_fn,R=1000)
+
+resultados<-boot(base_mujer, eta_mod2_fn,R=1000)
+resultados
+
+###Para Hombres
+
+
+eta_hombre_fn<-function(data,index
+) {
+  
+  #coeficientes
+  coefs<-lm(log_salario_mensual_hora ~ female+relab+maxEducLevel+edad+edad_2+tam_empresa, data=base_hombre, subset = index)$coefficients
+  
+  #coeficientes en escalares  
+  b5<-coefs[5]
+  b6<-coefs[6] 
+  
+  #calcular peak age
+  peak_age<-(-b5/(2*b6))
+  
+  #valor peak age
+  return(peak_age)
+}
+
+eta_mod2_fn(base_hombre,1:nrow(base_hombre)) 
+
+boot(base_hombre, eta_hombre_fn,R=1000)
+
+resultados<-boot(base_hombre, eta_mod2_fn,R=1000)
+resultados
 
 # PREGUNTA 5 -------------- Predicting earning --------------------
 

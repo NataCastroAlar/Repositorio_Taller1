@@ -1,14 +1,9 @@
 # Problem Set Template Repository for Big Data and Machine Learning for Applied Economics
 
-This is the template repository for the problem sets.
+El repositorio contiene la siguiente información relevante
 
-The repo should contain at least four folders:
-
-- `document`: contains your final document in `pdf` format. Ideally, the document should pull figures and tables directly from the `views` folder. I've included a latex template I created for the Thesis Seminar. 
-- `scripts`: contains all your scripts
-- `stores`: contains all the data sets used. If files are "too big" for GitHub, include a document describing where people can access the data.
-- `views`: contains all figures and tables
-
+- `document`: Contienen el documento "Documento Final - Taller 1" en el cual se encuentra el desarollo del problem set final en formato pdf.
+- `scripts`: En la carpeta de scrips, encontraremos el scrip llamado "Scrip_Consolidado_Taller_1.R" el cual contiene el codigo reproducible construido para el desarollo del taller. 
 
 
 ## Some general reminders: 
